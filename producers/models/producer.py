@@ -1,14 +1,16 @@
 """Producer base-class providing common utilites and functionality"""
 import logging
-import time
 
-
-from confluent_kafka import avro
-from confluent_kafka.admin import AdminClient, NewTopic
-from confluent_kafka.avro import AvroProducer
+from confluent_kafka import avro # avro serialization
+from confluent_kafka.admin import AdminClient, NewTopic #topic creation
+from confluent_kafka.avro import AvroProducer #produce a stream with avro schema
+from confluent_kafka.avro import CachedSchemaRegistryClient
 
 logger = logging.getLogger(__name__)
 
+ZOOKEEPER_URL = "localhost:2181"
+SCHEMA_REGISTRY_URL="http://localhost:8081"
+BROKER_URL="PLAINTEXT://localhost:9092"
 
 class Producer:
     """Defines and provides common functionality amongst Producers"""
@@ -38,9 +40,8 @@ class Producer:
         #
         #
         self.broker_properties = {
-            # TODO
-            # TODO
-            # TODO
+            "BROKER_URL":BROKER_URL,
+            "SCHEMA_REGISTRY_URL":SCHEMA_REGISTRY_URL
         }
 
         # If the topic does not already exist, try to create it
@@ -49,8 +50,10 @@ class Producer:
             Producer.existing_topics.add(self.topic_name)
 
         # TODO: Configure the AvroProducer
-        # self.producer = AvroProducer(
-        # )
+        self.producer = AvroProducer(
+            {"bootstrap.servers":BROKER_URL},
+            schema_registry = CachedSchemaRegistryClient({"url":SCHEMA_REGISTRY_URL})
+        )
 
     def create_topic(self):
         """Creates the producer topic if it does not already exist"""
