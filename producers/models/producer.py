@@ -1,10 +1,10 @@
 """Producer base-class providing common utilites and functionality"""
 import logging
+import time
 
 from confluent_kafka import avro # avro serialization
 from confluent_kafka.admin import AdminClient, NewTopic #topic creation
 from confluent_kafka.avro import AvroProducer #produce a stream with avro schema
-from confluent_kafka.avro import CachedSchemaRegistryClient
 
 logger = logging.getLogger(__name__)
 
@@ -40,8 +40,8 @@ class Producer:
         #
         #
         self.broker_properties = {
-            "BROKER_URL":BROKER_URL,
-            "SCHEMA_REGISTRY_URL":SCHEMA_REGISTRY_URL
+            "schema.registry.url":SCHEMA_REGISTRY_URL,
+            "bootstrap.servers":BROKER_URL
         }
 
         # If the topic does not already exist, try to create it
@@ -51,8 +51,10 @@ class Producer:
 
         # TODO: Configure the AvroProducer
         self.producer = AvroProducer(
-            {"bootstrap.servers":BROKER_URL},
-            schema_registry = CachedSchemaRegistryClient({"url":SCHEMA_REGISTRY_URL})
+            {"bootstrap.servers":BROKER_URL, 
+            "schema.registry.url":SCHEMA_REGISTRY_URL},
+            default_key_schema=key_schema,
+            default_value_schema=value_schema
         )
 
     def create_topic(self):
@@ -63,7 +65,30 @@ class Producer:
         # the Kafka Broker.
         #
         #
-        logger.info("topic creation kafka integration incomplete - skipping")
+        client=AdminClient({"bootstrap.servers":BROKER_URL})
+        topic_list=client.list_topics()
+
+        topics_properties=client.create_topics(
+            [
+                NewTopic(
+                    topic=self.topic_name,
+                    num_partitions=self.num_partitions,
+                    replication_factor=self.num_replicas,
+                    config={"compression.type":"lz4",
+                    "delete.retention.ms":"80",
+                    "file.delete.delay":"80",
+                    "cleanup.policy":"delete"}
+                )
+            ]
+        )
+
+        for topic, properties in topics_properties.items():
+            try:
+                topics_properties.result()
+                logger.info(f"Created {topic} Topic successfully")
+            except Exception as ex:
+                logger.info(f'Failed Creating Topic {topic} \n {e}')
+                continue
 
     def time_millis(self):
         return int(round(time.time() * 1000))
@@ -75,7 +100,10 @@ class Producer:
         # TODO: Write cleanup code for the Producer here
         #
         #
-        logger.info("producer close incomplete - skipping")
+        # logger.info("producer close incomplete - skipping")
+        if self.producer is not None:
+            self.producer.flush()
+
 
     def time_millis(self):
         """Use this function to get the key for Kafka Events"""
