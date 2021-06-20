@@ -37,7 +37,7 @@ class Station(Producer):
         # replicas
         #
         #
-        topic_name = f"chicago.{station_name}.arrivals" # TODO: Come up with a better topic name
+        topic_name = f"org.chicago.cta.station.arrivals.v1" # TODO: Come up with a better topic name
         super().__init__(
             topic_name,
             key_schema=Station.key_schema,
@@ -62,7 +62,7 @@ class Station(Producer):
         # TODO: Complete this function by producing an arrival message to Kafka
         #
         #
-        logger.info("arrival kafka integration incomplete - skipping")
+        #logger.info("arrival kafka integration incomplete - skipping")
         self.producer.produce(
            topic=self.topic_name,
            key={"timestamp": self.time_millis()},
